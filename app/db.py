@@ -3,8 +3,21 @@ import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB = ROOT / "data" / "leads.db"
-DB.parent.mkdir(exist_ok=True)
+
+
+def _db_path() -> Path:
+    if os.getenv("VERCEL"):
+        p = Path("/tmp/helios-leads.db")
+        return p
+    p = ROOT / "data" / "leads.db"
+    try:
+        p.parent.mkdir(exist_ok=True)
+        return p
+    except OSError:
+        return Path("/tmp/helios-leads.db")
+
+
+DB = _db_path()
 
 DDL = """
 CREATE TABLE IF NOT EXISTS leads (
@@ -53,7 +66,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_lead_addr ON leads(address, zip);
 
 
 def conn():
-    c = sqlite3.connect(DB)
+    DB.parent.mkdir(parents=True, exist_ok=True)
+    c = sqlite3.connect(str(DB), timeout=15)
     c.row_factory = sqlite3.Row
     c.executescript(DDL)
     return c
@@ -86,22 +100,28 @@ def list_leads(status=None, qualified=None, has_email=None, limit=500):
         q += " AND email IS NOT NULL AND email != '' AND email NOT LIKE '%@example.%'"
     q += " ORDER BY qualified DESC, kw_potential DESC, id DESC LIMIT ?"
     args.append(limit)
-    with conn() as c:
-        return [dict(r) for r in c.execute(q, args)]
+    try:
+        with conn() as c:
+            return [dict(r) for r in c.execute(q, args)]
+    except Exception:
+        return []
 
 
 def stats():
-    with conn() as c:
-        n = lambda sql: c.execute(sql).fetchone()[0]
-        return {
-            "total": n("SELECT COUNT(*) FROM leads"),
-            "qualified": n("SELECT COUNT(*) FROM leads WHERE qualified=1"),
-            "with_email": n("SELECT COUNT(*) FROM leads WHERE email IS NOT NULL AND email != '' AND email NOT LIKE '%@example.%'"),
-            "new": n("SELECT COUNT(*) FROM leads WHERE status='new'"),
-            "contacted": n("SELECT COUNT(*) FROM leads WHERE status='contacted'"),
-            "interested": n("SELECT COUNT(*) FROM leads WHERE status='interested'"),
-            "booked": n("SELECT COUNT(*) FROM leads WHERE status='booked'"),
-        }
+    try:
+        with conn() as c:
+            n = lambda sql: c.execute(sql).fetchone()[0]
+            return {
+                "total": n("SELECT COUNT(*) FROM leads"),
+                "qualified": n("SELECT COUNT(*) FROM leads WHERE qualified=1"),
+                "with_email": n("SELECT COUNT(*) FROM leads WHERE email IS NOT NULL AND email != '' AND email NOT LIKE '%@example.%'"),
+                "new": n("SELECT COUNT(*) FROM leads WHERE status='new'"),
+                "contacted": n("SELECT COUNT(*) FROM leads WHERE status='contacted'"),
+                "interested": n("SELECT COUNT(*) FROM leads WHERE status='interested'"),
+                "booked": n("SELECT COUNT(*) FROM leads WHERE status='booked'"),
+            }
+    except Exception:
+        return {"total": 0, "qualified": 0, "with_email": 0, "new": 0, "contacted": 0, "interested": 0, "booked": 0}
 
 
 def set_status(lead_id: int, status: str):

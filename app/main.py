@@ -76,7 +76,10 @@ def campaign(limit: int = 30):
 
 @app.post("/api/scan")
 def scan(city: str = Query("Pearland"), limit: int = 8):
-    return scanner.scan_city(city, limit=max(1, min(limit, 15)))
+    try:
+        return scanner.scan_city(city, limit=max(1, min(limit, 15)))
+    except Exception as e:
+        return {"error": str(e), "count": 0, "qualified": 0, "leads": []}
 
 
 @app.get("/api/places")
