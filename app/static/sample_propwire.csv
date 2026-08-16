@@ -1,0 +1,7 @@
+owner_name,email,phone,address,city,state,zip,county,property_type,sqft,year_built,owner_occupied
+Maria Delgado,maria.delgado.demo@example.com,7135550142,5118 Park Avenue,Pearland,TX,77581,Brazoria,SFR,2480,2003,true
+James Whitaker,james.whitaker.demo@example.com,2815550194,8821 Sienna Springs Blvd,Missouri City,TX,77459,Fort Bend,SFR,3120,2008,true
+Angela Brooks,angela.brooks.demo@example.com,8325550177,17409 Champion Forest Dr,Spring,TX,77379,Harris,SFR,2650,1999,true
+Robert Chen,robert.chen.demo@example.com,9725550118,4601 Twin Creeks Dr,Plano,TX,75024,Collin,SFR,2860,2001,true
+Patricia Nguyen,patricia.nguyen.demo@example.com,2145550163,12840 High Meadow Dr,Dallas,TX,75244,Dallas,SFR,2210,1996,true
+Carlos Mendez,carlos.mendez.demo@example.com,9565550130,2401 N 10th St,McAllen,TX,78501,Hidalgo,SFR,2340,2005,true

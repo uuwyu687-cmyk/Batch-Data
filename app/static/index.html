@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Helios · Texas VPP Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#07110f; --panel:#0d1c19; --line:rgba(120,230,210,.14);
+  --teal:#19f0c9; --violet:#8b7cff; --sun:#ffb020; --rose:#ff6b8a; --foam:#e9fff8;
+  --dim:#8eb5ac;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--ink);color:var(--foam);font-family:Sora,sans-serif}
+body{
+  background:
+    radial-gradient(900px 500px at 8% -10%, rgba(25,240,201,.18), transparent 55%),
+    radial-gradient(700px 420px at 100% 0%, rgba(139,124,255,.22), transparent 50%),
+    radial-gradient(600px 400px at 70% 110%, rgba(255,176,32,.12), transparent 45%),
+    var(--ink);
+}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.top{display:flex;justify-content:space-between;align-items:center;padding:22px 28px 8px}
+.brand{display:flex;gap:12px;align-items:center}
+.mark{width:42px;height:42px;border-radius:14px;background:conic-gradient(from 140deg,var(--teal),var(--sun),var(--violet),var(--teal));display:grid;place-items:center;font-weight:700;color:#04110e}
+.brand h1{margin:0;font-family:Fraunces,serif;font-size:28px;letter-spacing:-.03em}
+.brand p{margin:0;color:var(--dim);font-size:12px}
+.live{display:flex;gap:8px;align-items:center;color:var(--teal);font-size:12px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px var(--teal);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.wrap{padding:8px 28px 40px;display:grid;gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.kpi{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:18px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi:nth-child(1){box-shadow:inset 0 0 40px rgba(25,240,201,.08)}
+.kpi:nth-child(2){box-shadow:inset 0 0 40px rgba(139,124,255,.1)}
+.kpi:nth-child(3){box-shadow:inset 0 0 40px rgba(255,176,32,.08)}
+.kpi em{display:block;font-style:normal;color:var(--dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.kpi b{display:block;font-family:Fraunces,serif;font-size:34px;margin-top:4px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
+.card{background:rgba(13,28,25,.78);border:1px solid var(--line);border-radius:22px;padding:18px;backdrop-filter:blur(16px)}
+h2{margin:0 0 12px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#b7e8dc}
+.step{display:flex;gap:10px;margin:0 0 14px}
+.n{width:26px;height:26px;border-radius:9px;background:var(--teal);color:#05231d;font-weight:700;display:grid;place-items:center;flex:none}
+.cities{display:flex;flex-wrap:wrap;gap:7px;max-height:150px;overflow:auto;margin-bottom:14px}
+.chip{padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--foam);text-decoration:none;font-size:11px;background:rgba(255,255,255,.03)}
+.chip.ec{border-color:rgba(25,240,201,.45);color:var(--teal)}
+.chip.el{border-color:rgba(139,124,255,.5);color:#c9c2ff}
+.drop{border:1.5px dashed rgba(25,240,201,.35);border-radius:16px;padding:16px;text-align:center;color:var(--dim);margin:8px 0;background:rgba(25,240,201,.04);cursor:pointer}
+.drop b{color:var(--foam)}
+input[type=file]{display:none}
+select{width:100%;margin:0 0 8px;padding:10px;border-radius:12px;background:#10241f;color:var(--foam);border:1px solid var(--line);font-family:Sora,sans-serif}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+button{font-family:Sora,sans-serif;border:0;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
+.go{background:linear-gradient(90deg,var(--teal),#7dffd8);color:#05231d}
+.alt{background:#132824;color:var(--foam);border:1px solid var(--line)}
+.sun{background:linear-gradient(90deg,var(--sun),#ffd36a);color:#3a2500}
+.vio{background:linear-gradient(90deg,var(--violet),#c3bbff);color:#160e3a}
+label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px;margin:8px 0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.leads{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-height:72vh;overflow:auto;padding-right:4px}
+.lead{border:1px solid var(--line);border-radius:18px;padding:14px;background:linear-gradient(165deg,rgba(25,240,201,.07),rgba(139,124,255,.06) 55%,rgba(255,176,32,.05));animation:up .5s ease both}
+@keyframes up{from{opacity:0;transform:translateY(10px)}}
+.who{display:flex;justify-content:space-between;gap:8px}
+.av{width:36px;height:36px;border-radius:12px;background:#123;display:grid;place-items:center;font-weight:700;color:var(--teal)}
+.kw{font-family:Fraunces,serif;color:var(--sun);font-size:22px}
+.meta{color:var(--dim);font-size:12px;margin:8px 0}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px}
+.ecp{background:rgba(25,240,201,.15);color:var(--teal)}
+.elp{background:rgba(139,124,255,.18);color:#d4ceff}
+.ok{background:rgba(25,240,201,.12);color:#9fffe8}
+.bad{background:rgba(255,107,138,.15);color:var(--rose)}
+.tdu{background:rgba(255,176,32,.14);color:#ffd27a}
+.acts{display:flex;gap:6px;margin-top:10px}
+.acts button{flex:1;padding:8px;font-size:11px}
+.toast,.mail{position:fixed;z-index:5}
+.toast{right:18px;bottom:18px;max-width:360px;background:#10241f;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:#d7fff4;font-size:12px;white-space:pre-wrap;display:none}
+.mail{inset:0;background:rgba(0,0,0,.55);display:none;place-items:center}
+.mail.show{display:grid}
+.sheet{width:min(560px,92vw);background:#10241f;border:1px solid var(--line);border-radius:20px;padding:20px}
+.sheet h3{font-family:Fraunces,serif;margin:0 0 8px}
+.sheet pre{white-space:pre-wrap;color:#d7fff4;font-family:Sora,sans-serif;font-size:13px}
+@media(max-width:980px){.kpis,.layout{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start;gap:8px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">
+    <div class="mark">H</div>
+    <div>
+      <h1>Helios Desk</h1>
+      <p>Texas VPP · teal Energy Communities · purple eligible markets</p>
+    </div>
+  </div>
+  <div class="live"><span class="dot"></span> Oncor · AEP · CenterPoint · TNMP</div>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="layout">
+    <aside class="card">
+      <div class="step"><div class="n">1</div><div style="width:100%">
+        <h2>Scan Texas city</h2>
+        <p class="meta">Client asked for Texas only — teal Energy Communities + purple eligible markets. This list is cities, not houses.</p>
+        <select id="city"></select>
+        <div class="row">
+          <button class="sun" onclick="scanLive()">Scan real roofs</button>
+          <a class="chip ec" id="pwLink" href="#" target="_blank">Open in Propwire</a>
+        </div>
+        <p class="meta">Pick one city, then scan. Other states are not included.</p>
+      </div></div>
+      <div class="step"><div class="n">2</div><div style="width:100%">
+        <h2>Import Propwire skip-trace CSV</h2>
+        <div class="drop" id="drop" onclick="$('#file').click()">Drop CSV with <b>email</b> column</div>
+        <input id="file" type="file" accept=".csv,.json,text/csv"/>
+        <label class="ck"><input type="checkbox" id="enrich" checked/> Google roof + kW + bill enrich</label>
+        <div class="row">
+          <button class="go" onclick="imp()">Import emails &amp; qualify</button>
+        </div>
+        <p class="meta">In Propwire: Skip Trace → export CSV. Demo addresses without a real inbox are not qualified.</p>
+      </div></div>
+      <div class="step"><div class="n">3</div><div>
+        <h2>Autopilot outreach</h2>
+        <button class="vio" onclick="campaign()">Preview / send 30 emails</button>
+        <p class="meta">SMTP empty = preview only. Mark replies Interested or Booked.</p>
+      </div></div>
+    </aside>
+    <section class="card">
+      <h2>Homeowner pipeline</h2>
+      <div class="filters">
+        <button class="alt" onclick="loadLeads()">All</button>
+        <button class="go" onclick="loadLeads(1,null,1)">With email</button>
+        <button class="alt" onclick="loadLeads(1)">Qualified</button>
+        <button class="sun" onclick="loadLeads(null,'interested')">Interested</button>
+        <button class="vio" onclick="loadLeads(null,'booked')">Booked</button>
+      </div>
+      <div class="leads" id="tbl"></div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="log"></div>
+<div class="mail" id="mail" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="sheet"><h3 id="msub"></h3><pre id="mbody"></pre><div class="row"><button class="alt" onclick="$('#mail').classList.remove('show')">Close</button></div></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+function toast(t){ const el=$("#log"); el.style.display="block"; el.textContent=typeof t==="string"?t:JSON.stringify(t,null,2); setTimeout(()=>el.style.display="none",8000); }
+async function j(url,opt){ const r=await fetch(url,opt); return r.json(); }
+async function kpis(){
+  const s=await j("/api/stats");
+  const labels={total:"In desk",qualified:"Qualified",with_email:"With email",new:"Fresh",contacted:"Contacted",interested:"Warm",booked:"Booked"};
+  $("#kpis").innerHTML=Object.entries(s).map(([k,v])=>`<div class="kpi"><em>${labels[k]||k}</em><b>${v}</b></div>`).join("");
+}
+async function urls(){
+  const d=await j("/api/targeting");
+  const ec=d.propwire.filter(p=>p.zone==="energy_community");
+  const el=d.propwire.filter(p=>p.zone!=="energy_community");
+  const opt=(list)=>list.map(p=>`<option value="${p.city}" data-url="${p.url}">${p.city} · ${p.county} · ${p.tdu}</option>`).join("");
+  $("#city").innerHTML=`<optgroup label="Energy Community (teal)">${opt(ec)}</optgroup><optgroup label="Eligible market (purple)">${opt(el)}</optgroup>`;
+  const sync=()=>{ const o=$("#city").selectedOptions[0]; if(o) $("#pwLink").href=o.dataset.url||"#"; };
+  $("#city").onchange=sync; sync();
+}
+function ini(n){ return (n||"?").split(" ").filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase(); }
+async function loadLeads(q,status,email){
+  const p=new URLSearchParams();
+  if(q!=null) p.set("qualified", q);
+  if(status) p.set("status", status);
+  if(email) p.set("email", "1");
+  const rows=await j("/api/leads"+(p.toString()?"?"+p:""));
+  $("#tbl").innerHTML=rows.map((r,i)=>`
+    <article class="lead" style="animation-delay:${i*40}ms">
+      <div class="who">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="av">${ini(r.owner_name)}</div>
+          <div><b>${r.owner_name||"—"}</b><div class="meta">${r.status||"new"} · ${r.city||""}</div></div>
+        </div>
+        <div class="kw">${r.kw_potential??"—"}<span style="font-size:12px"> kW</span></div>
+      </div>
+      <div class="meta">${r.address||""}<br>${r.county||""} County · ${r.sqft||"—"} sf · ${r.year_built||"—"}</div>
+      <div class="pills">
+        <span class="pill ${r.zone==="energy_community"?"ecp":"elp"}">${r.zone==="energy_community"?"Energy Community":"Eligible market"}</span>
+        <span class="pill tdu">${r.tdu||"TDU?"}</span>
+        <span class="pill ${r.qualified?"ok":"bad"}">${r.qualified?"Qualified":(r.fail_reasons||"Hold")}</span>
+      </div>
+      <div class="meta">${r.email||"no email"} · ${r.phone||""}</div>
+      <div class="acts">
+        <button class="alt" onclick="preview(${r.id})">Email</button>
+        <button class="sun" onclick="st(${r.id},'interested')">Interested</button>
+        <button class="go" onclick="st(${r.id},'booked')">Booked</button>
+      </div>
+    </article>`).join("") || `<p class="meta">No homeowners in this view yet.</p>`;
+}
+async function imp(){
+  const f=$("#file").files[0]; if(!f){ toast("Drop a Propwire CSV or load sample."); return; }
+  toast("Qualifying…");
+  const fd=new FormData(); fd.append("file",f);
+  const d=await j(`/api/import?enrich=${$("#enrich").checked}&limit=80`,{method:"POST",body:fd});
+  toast(`Imported ${d.count} · qualified ${d.qualified}`);
+  await kpis(); await loadLeads(1);
+}
+async function scanLive(){
+  const city=$("#city").value; toast("Scanning live homes in "+city+"…");
+  const d=await j(`/api/scan?city=${encodeURIComponent(city)}&limit=8`,{method:"POST"});
+  toast(d.error || `Live scan ${d.count} homes · ${d.qualified} qualified`);
+  await kpis(); await loadLeads();
+}
+async function loadSample(){
+  const csv=await fetch("/static/sample_propwire.csv").then(r=>r.text());
+  const dt=new DataTransfer(); dt.items.add(new File([csv],"sample_propwire.csv",{type:"text/csv"})); $("#file").files=dt.files; await imp();
+}
+async function campaign(){ const d=await j("/api/campaign?limit=30",{method:"POST"}); toast(`Sent ${d.sent} · preview ${d.preview}`); await kpis(); await loadLeads(); }
+async function preview(id){ const d=await j("/api/preview/"+id); $("#msub").textContent=d.subject||""; $("#mbody").textContent=d.body||""; $("#mail").classList.add("show"); }
+async function st(id,v){ await j(`/api/status/${id}?value=${v}`,{method:"POST"}); await kpis(); await loadLeads(); }
+const drop=$("#drop");
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault(); drop.style.borderColor="var(--teal)"}));
+drop.addEventListener("dragleave",()=>drop.style.borderColor="");
+drop.addEventListener("drop",ev=>{ev.preventDefault(); $("#file").files=ev.dataTransfer.files; drop.textContent=ev.dataTransfer.files[0]?.name||"File ready";});
+$("#file").addEventListener("change",()=>drop.textContent=$("#file").files[0]?.name||"Drop Propwire CSV");
+kpis(); urls(); loadLeads();
+</script>
+</body>
+</html>
