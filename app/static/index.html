@@ -52,7 +52,12 @@ h2{margin:0 0 12px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;
 input[type=file]{display:none}
 select{width:100%;margin:0 0 8px;padding:10px;border-radius:12px;background:#10241f;color:var(--foam);border:1px solid var(--line);font-family:Sora,sans-serif}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-button{font-family:Sora,sans-serif;border:0;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
+.wrap,.top{position:relative;z-index:1}
+button,.chip,.drop,select{cursor:pointer;pointer-events:auto;position:relative;z-index:2}
+button{font-family:Sora,sans-serif;border:0;border-radius:12px;padding:10px 12px;font-weight:700}
+button:hover,.chip:hover{filter:brightness(1.15);transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+button.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--teal)}
 .go{background:linear-gradient(90deg,var(--teal),#7dffd8);color:#05231d}
 .alt{background:#132824;color:var(--foam);border:1px solid var(--line)}
 .sun{background:linear-gradient(90deg,var(--sun),#ffd36a);color:#3a2500}
@@ -105,35 +110,35 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
         <p class="meta">Client asked for Texas only — teal Energy Communities + purple eligible markets. This list is cities, not houses.</p>
         <select id="city"></select>
         <div class="row">
-          <button class="sun" onclick="scanLive()">Scan real roofs</button>
-          <a class="chip ec" id="pwLink" href="#" target="_blank">Open in Propwire</a>
+          <button type="button" class="sun" id="btnScan">Scan real roofs</button>
+          <a class="chip ec" id="pwLink" href="#" target="_blank" rel="noopener">Open in Propwire</a>
         </div>
         <p class="meta">Pick one city, then scan. Other states are not included.</p>
       </div></div>
       <div class="step"><div class="n">2</div><div style="width:100%">
         <h2>Import Propwire skip-trace CSV</h2>
-        <div class="drop" id="drop" onclick="$('#file').click()">Drop CSV with <b>email</b> column</div>
+        <div class="drop" id="drop">Drop CSV with <b>email</b> column</div>
         <input id="file" type="file" accept=".csv,.json,text/csv"/>
         <label class="ck"><input type="checkbox" id="enrich" checked/> Google roof + kW + bill enrich</label>
         <div class="row">
-          <button class="go" onclick="imp()">Import emails &amp; qualify</button>
+          <button type="button" class="go" id="btnImport">Import emails &amp; qualify</button>
         </div>
         <p class="meta">In Propwire: Skip Trace → export CSV. Demo addresses without a real inbox are not qualified.</p>
       </div></div>
       <div class="step"><div class="n">3</div><div>
         <h2>Autopilot outreach</h2>
-        <button class="vio" onclick="campaign()">Preview / send 30 emails</button>
+        <button type="button" class="vio" id="btnCampaign">Preview / send 30 emails</button>
         <p class="meta">SMTP empty = preview only. Mark replies Interested or Booked.</p>
       </div></div>
     </aside>
     <section class="card">
       <h2>Homeowner pipeline</h2>
-      <div class="filters">
-        <button class="alt" onclick="loadLeads()">All</button>
-        <button class="go" onclick="loadLeads(1,null,1)">With email</button>
-        <button class="alt" onclick="loadLeads(1)">Qualified</button>
-        <button class="sun" onclick="loadLeads(null,'interested')">Interested</button>
-        <button class="vio" onclick="loadLeads(null,'booked')">Booked</button>
+      <div class="filters" id="filters">
+        <button type="button" class="alt on" data-filter="all">All</button>
+        <button type="button" class="go" data-filter="email">With email</button>
+        <button type="button" class="alt" data-filter="qualified">Qualified</button>
+        <button type="button" class="sun" data-filter="interested">Interested</button>
+        <button type="button" class="vio" data-filter="booked">Booked</button>
       </div>
       <div class="leads" id="tbl"></div>
     </section>
@@ -141,83 +146,151 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
 </div>
 <div class="toast" id="log"></div>
 <div class="mail" id="mail" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="sheet"><h3 id="msub"></h3><pre id="mbody"></pre><div class="row"><button class="alt" onclick="$('#mail').classList.remove('show')">Close</button></div></div>
+  <div class="sheet" onclick="event.stopPropagation()"><h3 id="msub"></h3><pre id="mbody"></pre><div class="row"><button type="button" class="alt" id="btnCloseMail">Close</button></div></div>
 </div>
 <script>
 const $ = s => document.querySelector(s);
-function toast(t){ const el=$("#log"); el.style.display="block"; el.textContent=typeof t==="string"?t:JSON.stringify(t,null,2); setTimeout(()=>el.style.display="none",8000); }
-async function j(url,opt){ const r=await fetch(url,opt); return r.json(); }
+function toast(t){
+  const el=$("#log");
+  el.style.display="block";
+  el.textContent=typeof t==="string"?t:JSON.stringify(t,null,2);
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>el.style.display="none",8000);
+}
+async function j(url,opt){
+  const r=await fetch(url,opt);
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.detail||data.error||r.statusText||("HTTP "+r.status));
+  return data;
+}
+function markFilter(name){
+  document.querySelectorAll("#filters button").forEach(b=>b.classList.toggle("on", b.dataset.filter===name));
+}
 async function kpis(){
-  const s=await j("/api/stats");
-  const labels={total:"In desk",qualified:"Qualified",with_email:"With email",new:"Fresh",contacted:"Contacted",interested:"Warm",booked:"Booked"};
-  $("#kpis").innerHTML=Object.entries(s).map(([k,v])=>`<div class="kpi"><em>${labels[k]||k}</em><b>${v}</b></div>`).join("");
+  try{
+    const s=await j("/api/stats");
+    const labels={total:"In desk",qualified:"Qualified",with_email:"With email",new:"Fresh",contacted:"Contacted",interested:"Warm",booked:"Booked"};
+    $("#kpis").innerHTML=Object.entries(s).map(([k,v])=>`<div class="kpi"><em>${labels[k]||k}</em><b>${v}</b></div>`).join("");
+  }catch(e){ toast("Stats: "+e.message); }
 }
 async function urls(){
-  const d=await j("/api/targeting");
-  const ec=d.propwire.filter(p=>p.zone==="energy_community");
-  const el=d.propwire.filter(p=>p.zone!=="energy_community");
-  const opt=(list)=>list.map(p=>`<option value="${p.city}" data-url="${p.url}">${p.city} · ${p.county} · ${p.tdu}</option>`).join("");
-  $("#city").innerHTML=`<optgroup label="Energy Community (teal)">${opt(ec)}</optgroup><optgroup label="Eligible market (purple)">${opt(el)}</optgroup>`;
-  const sync=()=>{ const o=$("#city").selectedOptions[0]; if(o) $("#pwLink").href=o.dataset.url||"#"; };
-  $("#city").onchange=sync; sync();
+  try{
+    const d=await j("/api/targeting");
+    const ec=d.propwire.filter(p=>p.zone==="energy_community");
+    const el=d.propwire.filter(p=>p.zone!=="energy_community");
+    const opt=(list)=>list.map(p=>`<option value="${p.city}" data-url="${p.url}">${p.city} · ${p.county} · ${p.tdu}</option>`).join("");
+    $("#city").innerHTML=`<optgroup label="Energy Community (teal)">${opt(ec)}</optgroup><optgroup label="Eligible market (purple)">${opt(el)}</optgroup>`;
+    const sync=()=>{ const o=$("#city").selectedOptions[0]; if(o) $("#pwLink").href=o.dataset.url||"#"; };
+    $("#city").onchange=sync; sync();
+  }catch(e){ toast("Cities: "+e.message); }
 }
 function ini(n){ return (n||"?").split(" ").filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase(); }
-async function loadLeads(q,status,email){
-  const p=new URLSearchParams();
-  if(q!=null) p.set("qualified", q);
-  if(status) p.set("status", status);
-  if(email) p.set("email", "1");
-  const rows=await j("/api/leads"+(p.toString()?"?"+p:""));
-  $("#tbl").innerHTML=rows.map((r,i)=>`
-    <article class="lead" style="animation-delay:${i*40}ms">
-      <div class="who">
-        <div style="display:flex;gap:10px;align-items:center">
-          <div class="av">${ini(r.owner_name)}</div>
-          <div><b>${r.owner_name||"—"}</b><div class="meta">${r.status||"new"} · ${r.city||""}</div></div>
+async function loadLeads(q,status,email,filterName){
+  if(filterName) markFilter(filterName);
+  try{
+    const p=new URLSearchParams();
+    if(q!=null) p.set("qualified", q);
+    if(status) p.set("status", status);
+    if(email) p.set("email", "1");
+    const rows=await j("/api/leads"+(p.toString()?"?"+p:""));
+    const list=Array.isArray(rows)?rows:[];
+    $("#tbl").innerHTML=list.map((r,i)=>`
+      <article class="lead" style="animation-delay:${i*40}ms">
+        <div class="who">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="av">${ini(r.owner_name)}</div>
+            <div><b>${r.owner_name||"—"}</b><div class="meta">${r.status||"new"} · ${r.city||""}</div></div>
+          </div>
+          <div class="kw">${r.kw_potential??"—"}<span style="font-size:12px"> kW</span></div>
         </div>
-        <div class="kw">${r.kw_potential??"—"}<span style="font-size:12px"> kW</span></div>
-      </div>
-      <div class="meta">${r.address||""}<br>${r.county||""} County · ${r.sqft||"—"} sf · ${r.year_built||"—"}</div>
-      <div class="pills">
-        <span class="pill ${r.zone==="energy_community"?"ecp":"elp"}">${r.zone==="energy_community"?"Energy Community":"Eligible market"}</span>
-        <span class="pill tdu">${r.tdu||"TDU?"}</span>
-        <span class="pill ${r.qualified?"ok":"bad"}">${r.qualified?"Qualified":(r.fail_reasons||"Hold")}</span>
-      </div>
-      <div class="meta">${r.email||"no email"} · ${r.phone||""}</div>
-      <div class="acts">
-        <button class="alt" onclick="preview(${r.id})">Email</button>
-        <button class="sun" onclick="st(${r.id},'interested')">Interested</button>
-        <button class="go" onclick="st(${r.id},'booked')">Booked</button>
-      </div>
-    </article>`).join("") || `<p class="meta">No homeowners in this view yet.</p>`;
+        <div class="meta">${r.address||""}<br>${r.county||""} County · ${r.sqft||"—"} sf · ${r.year_built||"—"}</div>
+        <div class="pills">
+          <span class="pill ${r.zone==="energy_community"?"ecp":"elp"}">${r.zone==="energy_community"?"Energy Community":"Eligible market"}</span>
+          <span class="pill tdu">${r.tdu||"TDU?"}</span>
+          <span class="pill ${r.qualified?"ok":"bad"}">${r.qualified?"Qualified":(r.fail_reasons||"Hold")}</span>
+        </div>
+        <div class="meta">${r.email||"no email"} · ${r.phone||""}</div>
+        <div class="acts">
+          <button type="button" class="alt" data-act="preview" data-id="${r.id}">Email</button>
+          <button type="button" class="sun" data-act="interested" data-id="${r.id}">Interested</button>
+          <button type="button" class="go" data-act="booked" data-id="${r.id}">Booked</button>
+        </div>
+      </article>`).join("") || `<p class="meta">No homeowners in this view yet.</p>`;
+  }catch(e){ toast("Leads: "+e.message); }
 }
 async function imp(){
-  const f=$("#file").files[0]; if(!f){ toast("Drop a Propwire CSV or load sample."); return; }
+  const f=$("#file").files[0]; if(!f){ toast("Drop a Propwire CSV first."); return; }
   toast("Qualifying…");
-  const fd=new FormData(); fd.append("file",f);
-  const d=await j(`/api/import?enrich=${$("#enrich").checked}&limit=80`,{method:"POST",body:fd});
-  toast(`Imported ${d.count} · qualified ${d.qualified}`);
-  await kpis(); await loadLeads(1);
+  try{
+    const fd=new FormData(); fd.append("file",f);
+    const d=await j(`/api/import?enrich=${$("#enrich").checked}&limit=80`,{method:"POST",body:fd});
+    toast(`Imported ${d.count} · qualified ${d.qualified}`);
+    await kpis(); await loadLeads(null,null,null,"all");
+  }catch(e){ toast("Import: "+e.message); }
 }
 async function scanLive(){
-  const city=$("#city").value; toast("Scanning live homes in "+city+"…");
-  const d=await j(`/api/scan?city=${encodeURIComponent(city)}&limit=8`,{method:"POST"});
-  toast(d.error || `Live scan ${d.count} homes · ${d.qualified} qualified`);
-  await kpis(); await loadLeads();
+  const city=$("#city").value;
+  if(!city){ toast("Pick a Texas city first."); return; }
+  toast("Scanning live homes in "+city+"…");
+  try{
+    const d=await j(`/api/scan?city=${encodeURIComponent(city)}&limit=8`,{method:"POST"});
+    toast(d.error || `Live scan ${d.count} homes · ${d.qualified} qualified`);
+    await kpis(); await loadLeads(null,null,null,"all");
+  }catch(e){ toast("Scan: "+e.message); }
 }
-async function loadSample(){
-  const csv=await fetch("/static/sample_propwire.csv").then(r=>r.text());
-  const dt=new DataTransfer(); dt.items.add(new File([csv],"sample_propwire.csv",{type:"text/csv"})); $("#file").files=dt.files; await imp();
+async function campaign(){
+  try{
+    const d=await j("/api/campaign?limit=30",{method:"POST"});
+    toast(`Sent ${d.sent} · preview ${d.preview}`);
+    await kpis(); await loadLeads(null,null,null,"all");
+  }catch(e){ toast("Campaign: "+e.message); }
 }
-async function campaign(){ const d=await j("/api/campaign?limit=30",{method:"POST"}); toast(`Sent ${d.sent} · preview ${d.preview}`); await kpis(); await loadLeads(); }
-async function preview(id){ const d=await j("/api/preview/"+id); $("#msub").textContent=d.subject||""; $("#mbody").textContent=d.body||""; $("#mail").classList.add("show"); }
-async function st(id,v){ await j(`/api/status/${id}?value=${v}`,{method:"POST"}); await kpis(); await loadLeads(); }
+async function preview(id){
+  try{
+    const d=await j("/api/preview/"+id);
+    $("#msub").textContent=d.subject||"";
+    $("#mbody").textContent=d.body||"";
+    $("#mail").classList.add("show");
+  }catch(e){ toast("Preview: "+e.message); }
+}
+async function st(id,v){
+  try{
+    await j(`/api/status/${id}?value=${v}`,{method:"POST"});
+    await kpis();
+    await loadLeads(null,null,null,"all");
+  }catch(e){ toast("Status: "+e.message); }
+}
+$("#btnScan").addEventListener("click", scanLive);
+$("#btnImport").addEventListener("click", imp);
+$("#btnCampaign").addEventListener("click", campaign);
+$("#btnCloseMail").addEventListener("click", ()=>$("#mail").classList.remove("show"));
+$("#mail").addEventListener("click", e=>{ if(e.target===$("#mail")) $("#mail").classList.remove("show"); });
+$("#drop").addEventListener("click", ()=>$("#file").click());
+$("#pwLink").addEventListener("click", e=>{
+  if(!$("#pwLink").href || $("#pwLink").href.endsWith("#")){ e.preventDefault(); toast("Pick a city first."); }
+});
+$("#filters").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const f=b.dataset.filter;
+  if(f==="all") loadLeads(null,null,null,"all");
+  else if(f==="email") loadLeads(1,null,1,"email");
+  else if(f==="qualified") loadLeads(1,null,null,"qualified");
+  else if(f==="interested") loadLeads(null,"interested",null,"interested");
+  else if(f==="booked") loadLeads(null,"booked",null,"booked");
+});
+$("#tbl").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const id=Number(b.dataset.id);
+  if(b.dataset.act==="preview") preview(id);
+  if(b.dataset.act==="interested") st(id,"interested");
+  if(b.dataset.act==="booked") st(id,"booked");
+});
 const drop=$("#drop");
 ["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault(); drop.style.borderColor="var(--teal)"}));
 drop.addEventListener("dragleave",()=>drop.style.borderColor="");
 drop.addEventListener("drop",ev=>{ev.preventDefault(); $("#file").files=ev.dataTransfer.files; drop.textContent=ev.dataTransfer.files[0]?.name||"File ready";});
 $("#file").addEventListener("change",()=>drop.textContent=$("#file").files[0]?.name||"Drop Propwire CSV");
-kpis(); urls(); loadLeads();
+kpis(); urls(); loadLeads(null,null,null,"all");
 </script>
 </body>
 </html>
