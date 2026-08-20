@@ -4,13 +4,30 @@ from .targeting import FILTERS
 
 FAKE_MAIL = ("example.com", "example.org", "test.com", "mailinator.com")
 
-DEMO_GMAILS = [
-    "johndavid", "mariagarcia", "jameswhitaker", "angelabrooks",
-    "robertchen", "patricianugyen", "carlosmendez", "sarahjohnson",
-    "michaelsmith", "emilywilson", "davidmartinez", "jessicabrown",
-    "danielkim", "ashleylopez", "chrispatel", "laurenwalker",
-    "briannguyen", "oliviamiller", "kevinharris", "natalieclark",
+DEMO_PEOPLE = [
+    ("johndavid", "John David"),
+    ("mariagarcia", "Maria Garcia"),
+    ("jameswhitaker", "James Whitaker"),
+    ("angelabrooks", "Angela Brooks"),
+    ("robertchen", "Robert Chen"),
+    ("patricianguen", "Patricia Nguyen"),
+    ("carlosmendez", "Carlos Mendez"),
+    ("sarahjohnson", "Sarah Johnson"),
+    ("michaelsmith", "Michael Smith"),
+    ("emilywilson", "Emily Wilson"),
+    ("davidmartinez", "David Martinez"),
+    ("jessicabrown", "Jessica Brown"),
+    ("danielkim", "Daniel Kim"),
+    ("ashleylopez", "Ashley Lopez"),
+    ("chrispatel", "Chris Patel"),
+    ("laurenwalker", "Lauren Walker"),
+    ("briannguyen", "Brian Nguyen"),
+    ("oliviamiller", "Olivia Miller"),
+    ("kevinharris", "Kevin Harris"),
+    ("natalieclark", "Natalie Clark"),
 ]
+DEMO_GMAILS = [p[0] for p in DEMO_PEOPLE]
+DEMO_YEARS = [1995, 1996, 1998, 1999, 2001, 2003, 2005, 2007, 2008, 2010, 2012, 2014, 2016, 2018, 2020]
 
 
 def real_email(v: str) -> str:
@@ -24,17 +41,41 @@ def real_email(v: str) -> str:
     return e
 
 
-def dummy_email(row: dict) -> str:
+def dummy_profile(row: dict) -> dict:
     key = "|".join(str(row.get(k) or "") for k in ("address", "zip", "city", "id"))
     n = int(hashlib.md5(key.encode()).hexdigest(), 16)
-    local = DEMO_GMAILS[n % len(DEMO_GMAILS)]
-    return f"{local}@gmail.com"
+    local, full = DEMO_PEOPLE[n % len(DEMO_PEOPLE)]
+    return {
+        "email": f"{local}@gmail.com",
+        "owner_name": full,
+        "first_name": full.split()[0],
+        "year_built": DEMO_YEARS[n % len(DEMO_YEARS)],
+        "phone": f"713-555-{1000 + (n % 9000):04d}",
+        "sqft": 2100 + (n % 1400),
+        "bill_estimate": round(115 + (n % 95) + ((n // 7) % 100) / 100, 2),
+    }
+
+
+def dummy_email(row: dict) -> str:
+    return dummy_profile(row)["email"]
 
 
 def fill_dummy_email(row: dict) -> dict:
-    if real_email(row.get("email") or ""):
-        return row
-    row["email"] = dummy_email(row)
+    p = dummy_profile(row)
+    if not real_email(row.get("email") or ""):
+        row["email"] = p["email"]
+        row["owner_name"] = p["owner_name"]
+        row["first_name"] = p["first_name"]
+    if not (row.get("year_built") or 0):
+        row["year_built"] = p["year_built"]
+    if not str(row.get("phone") or "").strip():
+        row["phone"] = p["phone"]
+    if not (row.get("sqft") or 0):
+        row["sqft"] = p["sqft"]
+    if not row.get("bill_estimate"):
+        row["bill_estimate"] = p["bill_estimate"]
+    if not (row.get("property_type") or "").strip():
+        row["property_type"] = "SFR"
     return row
 
 
