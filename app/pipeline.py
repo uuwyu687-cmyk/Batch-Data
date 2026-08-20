@@ -1,4 +1,5 @@
-from . import db, google_api, targeting
+import re
+from . import db, google_api, melissa, targeting
 from .targeting import FILTERS
 
 FAKE_MAIL = ("example.com", "example.org", "test.com", "mailinator.com")
@@ -11,6 +12,22 @@ def real_email(v: str) -> str:
     if any(x in e for x in FAKE_MAIL):
         return ""
     return e
+
+
+def dummy_email(row: dict) -> str:
+    raw = row.get("owner_name") or row.get("first_name") or row.get("address") or "homeowner"
+    skip = {"resident", "jr", "sr", "ii", "iii", "near", "the", "and"}
+    parts = [p for p in re.findall(r"[a-z0-9]+", str(raw).lower()) if p not in skip]
+    slug = ".".join(parts[:2]) or "homeowner"
+    city = (re.findall(r"[a-z0-9]+", (row.get("city") or "tx").lower()) or ["tx"])[0]
+    return f"{slug}.{city}@example.com"
+
+
+def fill_dummy_email(row: dict) -> dict:
+    if real_email(row.get("email") or "") or (row.get("email") or "").strip():
+        return row
+    row["email"] = dummy_email(row)
+    return row
 
 
 def first_name(name: str) -> str:
@@ -87,12 +104,17 @@ def enrich(row: dict) -> dict:
     row["tdu"] = targeting.tdu_for(county)
     row["energy_community"] = int(row["zone"] == "energy_community")
     row["deregulated"] = int(bool(row["tdu"]))
+    try:
+        row = melissa.append_contact(row)
+    except Exception:
+        pass
     row["first_name"] = first_name(row.get("owner_name") or "")
     row["email"] = real_email(row.get("email") or "")
     row["contact_ok"] = int(bool(row["email"]))
     ok, why = qualify(row)
     row["qualified"] = int(ok)
     row["fail_reasons"] = "; ".join(why)
+    fill_dummy_email(row)
     row["owner_occupied"] = int(bool(row.get("owner_occupied")))
     row["roof_suitable"] = int(bool(row.get("roof_suitable"))) if row.get("roof_suitable") is not None else None
     row["existing_solar"] = int(bool(row.get("existing_solar")))
@@ -112,6 +134,10 @@ def ingest(rows: list[dict], do_enrich=True, limit=200) -> dict:
                 row["tdu"] = targeting.tdu_for(county)
                 row["energy_community"] = int(row["zone"] == "energy_community")
                 row["deregulated"] = int(bool(row["tdu"]))
+                try:
+                    row = melissa.append_contact(row)
+                except Exception:
+                    pass
                 row["first_name"] = first_name(row.get("owner_name") or "")
                 row["contact_ok"] = int(bool(real_email(row.get("email") or "")))
                 row["owner_occupied"] = int(bool(row.get("owner_occupied")))
@@ -121,6 +147,7 @@ def ingest(rows: list[dict], do_enrich=True, limit=200) -> dict:
                 ok, why = qualify(row)
                 row["qualified"] = int(ok)
                 row["fail_reasons"] = "; ".join(why)
+                fill_dummy_email(row)
             row["status"] = row.get("status") or "new"
             lid = db.upsert_lead({k: row.get(k) for k in [
                 "owner_name","first_name","email","phone","address","city","state","zip","county",
@@ -133,4 +160,10 @@ def ingest(rows: list[dict], do_enrich=True, limit=200) -> dict:
         except Exception as e:
             row["fail_reasons"] = str(e)
             saved.append(row)
-    return {"count": len(saved), "qualified": sum(1 for r in saved if r.get("qualified")), "leads": saved}
+    return {
+        "count": len(saved),
+        "qualified": sum(1 for r in saved if r.get("qualified")),
+        "with_email": sum(1 for r in saved if (r.get("email") or "").strip()),
+        "melissa": melissa.status(),
+        "leads": saved,
+    }

@@ -62,6 +62,15 @@ CREATE TABLE IF NOT EXISTS messages (
   FOREIGN KEY(lead_id) REFERENCES leads(id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lead_addr ON leads(address, zip);
+CREATE TABLE IF NOT EXISTS melissa_cache (
+  addr_key TEXT PRIMARY KEY,
+  email TEXT,
+  phone TEXT,
+  owner_name TEXT,
+  results TEXT,
+  source TEXT,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 
@@ -97,7 +106,7 @@ def list_leads(status=None, qualified=None, has_email=None, limit=500):
         q += " AND qualified=?"
         args.append(int(qualified))
     if has_email:
-        q += " AND email IS NOT NULL AND email != '' AND email NOT LIKE '%@example.%'"
+        q += " AND email IS NOT NULL AND email != ''"
     q += " ORDER BY qualified DESC, kw_potential DESC, id DESC LIMIT ?"
     args.append(limit)
     try:
@@ -114,7 +123,7 @@ def stats():
             return {
                 "total": n("SELECT COUNT(*) FROM leads"),
                 "qualified": n("SELECT COUNT(*) FROM leads WHERE qualified=1"),
-                "with_email": n("SELECT COUNT(*) FROM leads WHERE email IS NOT NULL AND email != '' AND email NOT LIKE '%@example.%'"),
+                "with_email": n("SELECT COUNT(*) FROM leads WHERE email IS NOT NULL AND email != ''"),
                 "new": n("SELECT COUNT(*) FROM leads WHERE status='new'"),
                 "contacted": n("SELECT COUNT(*) FROM leads WHERE status='contacted'"),
                 "interested": n("SELECT COUNT(*) FROM leads WHERE status='interested'"),

@@ -76,12 +76,12 @@ def scan_city(city: str, limit: int = 8) -> dict:
             limit = min(limit, 3)
         geo = google_api.geocode(f"{city}, Texas")
         if not geo:
-            return {"error": "city not found", "count": 0, "qualified": 0, "leads": []}
+            return {"error": "city not found", "count": 0, "qualified": 0, "with_email": 0, "leads": []}
         if geo.get("county") and not targeting.is_target(geo["county"]):
-            return {"error": f"{geo.get('county')} County is outside teal/purple eligible TDU", "count": 0, "qualified": 0, "leads": []}
+            return {"error": f"{geo.get('county')} County is outside teal/purple eligible TDU", "count": 0, "qualified": 0, "with_email": 0, "leads": []}
         houses = osm_houses(city, limit=limit)
         if not houses:
-            return {"error": "No houses found in this city right now. Try another Texas city.", "count": 0, "qualified": 0, "leads": []}
+            return {"error": "No houses found in this city right now. Try another Texas city.", "count": 0, "qualified": 0, "with_email": 0, "leads": []}
         enriched = []
         for h in houses:
             try:
@@ -118,5 +118,5 @@ def scan_city(city: str, limit: int = 8) -> dict:
             enriched.append(h)
         return pipeline.ingest(enriched, do_enrich=False, limit=limit)
     except Exception as e:
-        return {"error": str(e), "count": 0, "qualified": 0, "leads": []}
+        return {"error": str(e), "count": 0, "qualified": 0, "with_email": 0, "leads": []}
 

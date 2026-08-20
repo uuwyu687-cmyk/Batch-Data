@@ -46,6 +46,9 @@ def send_one(lead: dict) -> str:
     to = (lead.get("email") or "").strip()
     if not to:
         return "no_email"
+    low = to.lower()
+    if any(x in low for x in ("example.com", "example.org", "test.com", "mailinator.com")):
+        return "dummy_skip"
     subj, body = render(lead)
     user, pw = os.getenv("SMTP_USER"), os.getenv("SMTP_PASS")
     if not user or not pw:

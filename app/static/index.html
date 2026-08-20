@@ -99,7 +99,7 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
       <p>Texas VPP · teal Energy Communities · purple eligible markets</p>
     </div>
   </div>
-  <div class="live"><span class="dot"></span> Oncor · AEP · CenterPoint · TNMP</div>
+  <div class="live" id="live"><span class="dot"></span> Oncor · AEP · CenterPoint · TNMP</div>
 </div>
 <div class="wrap">
   <div class="kpis" id="kpis"></div>
@@ -112,7 +112,7 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
           <button type="button" class="sun" id="btnScan">Scan real roofs</button>
           <a class="chip ec" id="pwLink" href="#" target="_blank" rel="noopener">Open in Propwire</a>
         </div>
-        <p class="meta">Pick one city, then scan. Other states are not included.</p>
+        <p class="meta">Scan finds real Texas roofs, then Melissa Personator appends owner email when a match exists.</p>
       </div></div>
       <div class="step"><div class="n">2</div><div style="width:100%">
         <h2>Import Propwire skip-trace CSV</h2>
@@ -122,7 +122,7 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
         <div class="row">
           <button type="button" class="go" id="btnImport">Import emails &amp; qualify</button>
         </div>
-        <p class="meta">In Propwire: Skip Trace → export CSV. Demo addresses without a real inbox are not qualified.</p>
+        <p class="meta">CSV emails are used as-is. Blank emails are filled by Melissa Personator, then qualified.</p>
       </div></div>
       <div class="step"><div class="n">3</div><div>
         <h2>Autopilot outreach</h2>
@@ -223,7 +223,7 @@ async function imp(){
   try{
     const fd=new FormData(); fd.append("file",f);
     const d=await j(`/api/import?enrich=${$("#enrich").checked}&limit=80`,{method:"POST",body:fd});
-    toast(`Imported ${d.count} · qualified ${d.qualified}`);
+    toast(`Imported ${d.count} · ${d.with_email||0} emails · qualified ${d.qualified}`);
     await kpis(); await loadLeads(null,null,null,"all");
   }catch(e){ toast("Import: "+e.message); }
 }
@@ -233,7 +233,7 @@ async function scanLive(){
   toast("Scanning live homes in "+city+"…");
   try{
     const d=await j(`/api/scan?city=${encodeURIComponent(city)}&limit=8`,{method:"POST"});
-    toast(d.error || `Live scan ${d.count} homes · ${d.qualified} qualified`);
+    toast(d.error || `Live scan ${d.count} homes · ${d.with_email||0} emails · ${d.qualified} qualified${d.melissa && !d.melissa.auth_ok && d.melissa.last_code ? " · Melissa "+d.melissa.last_code : ""}`);
     await kpis(); await loadLeads(null,null,null,"all");
   }catch(e){ toast("Scan: "+e.message); }
 }
@@ -290,6 +290,9 @@ drop.addEventListener("dragleave",()=>drop.style.borderColor="");
 drop.addEventListener("drop",ev=>{ev.preventDefault(); $("#file").files=ev.dataTransfer.files; drop.textContent=ev.dataTransfer.files[0]?.name||"File ready";});
 $("#file").addEventListener("change",()=>drop.textContent=$("#file").files[0]?.name||"Drop Propwire CSV");
 kpis(); urls(); loadLeads(null,null,null,"all");
+j("/api/health").then(h=>{
+  if(h.melissa) $("#live").innerHTML += " · Melissa Personator";
+}).catch(()=>{});
 </script>
 </body>
 </html>

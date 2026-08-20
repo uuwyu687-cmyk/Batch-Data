@@ -4,7 +4,7 @@ from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
-from . import db, targeting, propwire, pipeline, mail, google_api, scanner
+from . import db, targeting, propwire, pipeline, mail, google_api, scanner, melissa
 
 load_dotenv()
 app = FastAPI(title="Solrite VPP Lead Engine")
@@ -36,7 +36,10 @@ def targeting_data(ec: bool = True, eligible: bool = True):
 @app.get("/api/leads")
 def leads(qualified: int | None = None, status: str | None = None, email: int | None = None):
     q = None if qualified is None else bool(qualified)
-    return db.list_leads(status=status, qualified=q, has_email=bool(email))
+    rows = db.list_leads(status=status, qualified=q, has_email=bool(email))
+    for r in rows:
+        pipeline.fill_dummy_email(r)
+    return rows
 
 
 @app.post("/api/import")
@@ -79,7 +82,7 @@ def scan(city: str = Query("Pearland"), limit: int = 8):
     try:
         return scanner.scan_city(city, limit=max(1, min(limit, 15)))
     except Exception as e:
-        return {"error": str(e), "count": 0, "qualified": 0, "leads": []}
+        return {"error": str(e), "count": 0, "qualified": 0, "with_email": 0, "leads": []}
 
 
 @app.get("/api/places")
@@ -89,4 +92,9 @@ def places(q: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "google_key": bool(os.getenv("GOOGLE_API_KEY"))}
+    return {
+        "ok": True,
+        "google_key": bool(os.getenv("GOOGLE_API_KEY")),
+        "melissa": melissa.configured(),
+        "melissa_status": melissa.status(),
+    }
