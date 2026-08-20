@@ -1,7 +1,9 @@
+import csv
+import io
 import os
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from . import db, targeting, propwire, pipeline, mail, google_api, scanner, melissa
@@ -40,6 +42,30 @@ def leads(qualified: int | None = None, status: str | None = None, email: int | 
     for r in rows:
         pipeline.fill_dummy_email(r)
     return rows
+
+
+CSV_COLS = [
+    "owner_name", "first_name", "email", "phone", "address", "city", "state", "zip",
+    "county", "zone", "tdu", "sqft", "year_built", "kw_potential", "bill_estimate",
+    "qualified", "status",
+]
+
+
+@app.get("/api/leads.csv")
+def leads_csv():
+    rows = db.list_leads(limit=2000)
+    for r in rows:
+        pipeline.fill_dummy_email(r)
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=CSV_COLS, extrasaction="ignore")
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: "" if r.get(k) is None else r.get(k) for k in CSV_COLS})
+    return Response(
+        content="\ufeff" + buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="helios-leads.csv"'},
+    )
 
 
 @app.post("/api/import")

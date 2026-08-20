@@ -110,6 +110,7 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
         <select id="city"></select>
         <div class="row">
           <button type="button" class="sun" id="btnScan">Scan real roofs</button>
+          <button type="button" class="go" id="btnCsv">Download CSV</button>
         </div>
       </div></div>
       <div class="step"><div class="n">2</div><div>
@@ -236,6 +237,10 @@ async function st(id,v){
   }catch(e){ toast("Status: "+e.message); }
 }
 $("#btnScan").addEventListener("click", scanLive);
+$("#btnCsv").addEventListener("click", ()=>{
+  window.location.href="/api/leads.csv";
+  toast("Downloading helios-leads.csv");
+});
 $("#btnCampaign").addEventListener("click", campaign);
 $("#btnCloseMail").addEventListener("click", ()=>$("#mail").classList.remove("show"));
 $("#mail").addEventListener("click", e=>{ if(e.target===$("#mail")) $("#mail").classList.remove("show"); });
