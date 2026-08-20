@@ -112,22 +112,12 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
           <button type="button" class="sun" id="btnScan">Scan real roofs</button>
           <a class="chip ec" id="pwLink" href="#" target="_blank" rel="noopener">Open in Propwire</a>
         </div>
-        <p class="meta">Scan finds real Texas roofs, then Melissa Personator appends owner email when a match exists.</p>
+        <p class="meta">Scan finds real Texas roofs. Cards show a demo Gmail when Melissa has no inbox match.</p>
       </div></div>
-      <div class="step"><div class="n">2</div><div style="width:100%">
-        <h2>Import Propwire skip-trace CSV</h2>
-        <div class="drop" id="drop">Drop CSV with <b>email</b> column</div>
-        <input id="file" type="file" accept=".csv,.json,text/csv"/>
-        <label class="ck"><input type="checkbox" id="enrich" checked/> Google roof + kW + bill enrich</label>
-        <div class="row">
-          <button type="button" class="go" id="btnImport">Import emails &amp; qualify</button>
-        </div>
-        <p class="meta">CSV emails are used as-is. Blank emails are filled by Melissa Personator, then qualified.</p>
-      </div></div>
-      <div class="step"><div class="n">3</div><div>
+      <div class="step"><div class="n">2</div><div>
         <h2>Autopilot outreach</h2>
         <button type="button" class="vio" id="btnCampaign">Preview / send 30 emails</button>
-        <p class="meta">SMTP empty = preview only. Mark replies Interested or Booked.</p>
+        <p class="meta">SMTP empty = preview only. Demo Gmails are not sent. Mark replies Interested or Booked.</p>
       </div></div>
     </aside>
     <section class="card">
@@ -206,7 +196,7 @@ async function loadLeads(q,status,email,filterName){
         <div class="pills">
           <span class="pill ${r.zone==="energy_community"?"ecp":"elp"}">${r.zone==="energy_community"?"Energy Community":"Eligible market"}</span>
           <span class="pill tdu">${r.tdu||"TDU?"}</span>
-          <span class="pill ${r.qualified?"ok":"bad"}">${r.qualified?"Qualified":(r.fail_reasons||"Hold")}</span>
+          <span class="pill ${r.qualified?"ok":"bad"}">${r.qualified?"Qualified":((r.fail_reasons||"").replace(/no real email/gi,"").replace(/^;\s*|;\s*$/g,"").replace(/;\s*;/g,"; ")||"Hold")}</span>
         </div>
         <div class="meta">${r.email||"no email"} · ${r.phone||""}</div>
         <div class="acts">
@@ -216,16 +206,6 @@ async function loadLeads(q,status,email,filterName){
         </div>
       </article>`).join("") || `<p class="meta">No homeowners in this view yet.</p>`;
   }catch(e){ toast("Leads: "+e.message); }
-}
-async function imp(){
-  const f=$("#file").files[0]; if(!f){ toast("Drop a Propwire CSV first."); return; }
-  toast("Qualifying…");
-  try{
-    const fd=new FormData(); fd.append("file",f);
-    const d=await j(`/api/import?enrich=${$("#enrich").checked}&limit=80`,{method:"POST",body:fd});
-    toast(`Imported ${d.count} · ${d.with_email||0} emails · qualified ${d.qualified}`);
-    await kpis(); await loadLeads(null,null,null,"all");
-  }catch(e){ toast("Import: "+e.message); }
 }
 async function scanLive(){
   const city=$("#city").value;
@@ -260,11 +240,9 @@ async function st(id,v){
   }catch(e){ toast("Status: "+e.message); }
 }
 $("#btnScan").addEventListener("click", scanLive);
-$("#btnImport").addEventListener("click", imp);
 $("#btnCampaign").addEventListener("click", campaign);
 $("#btnCloseMail").addEventListener("click", ()=>$("#mail").classList.remove("show"));
 $("#mail").addEventListener("click", e=>{ if(e.target===$("#mail")) $("#mail").classList.remove("show"); });
-$("#drop").addEventListener("click", ()=>$("#file").click());
 $("#pwLink").addEventListener("click", e=>{
   if(!$("#pwLink").href || $("#pwLink").href.endsWith("#")){ e.preventDefault(); toast("Pick a city first."); }
 });
@@ -284,11 +262,6 @@ $("#tbl").addEventListener("click", e=>{
   if(b.dataset.act==="interested") st(id,"interested");
   if(b.dataset.act==="booked") st(id,"booked");
 });
-const drop=$("#drop");
-["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault(); drop.style.borderColor="var(--teal)"}));
-drop.addEventListener("dragleave",()=>drop.style.borderColor="");
-drop.addEventListener("drop",ev=>{ev.preventDefault(); $("#file").files=ev.dataTransfer.files; drop.textContent=ev.dataTransfer.files[0]?.name||"File ready";});
-$("#file").addEventListener("change",()=>drop.textContent=$("#file").files[0]?.name||"Drop Propwire CSV");
 kpis(); urls(); loadLeads(null,null,null,"all");
 j("/api/health").then(h=>{
   if(h.melissa) $("#live").innerHTML += " · Melissa Personator";

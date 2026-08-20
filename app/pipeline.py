@@ -1,8 +1,16 @@
-import re
+import hashlib
 from . import db, google_api, melissa, targeting
 from .targeting import FILTERS
 
 FAKE_MAIL = ("example.com", "example.org", "test.com", "mailinator.com")
+
+DEMO_GMAILS = [
+    "johndavid", "mariagarcia", "jameswhitaker", "angelabrooks",
+    "robertchen", "patricianugyen", "carlosmendez", "sarahjohnson",
+    "michaelsmith", "emilywilson", "davidmartinez", "jessicabrown",
+    "danielkim", "ashleylopez", "chrispatel", "laurenwalker",
+    "briannguyen", "oliviamiller", "kevinharris", "natalieclark",
+]
 
 
 def real_email(v: str) -> str:
@@ -11,20 +19,20 @@ def real_email(v: str) -> str:
         return ""
     if any(x in e for x in FAKE_MAIL):
         return ""
+    if e.split("@")[0] in DEMO_GMAILS:
+        return ""
     return e
 
 
 def dummy_email(row: dict) -> str:
-    raw = row.get("owner_name") or row.get("first_name") or row.get("address") or "homeowner"
-    skip = {"resident", "jr", "sr", "ii", "iii", "near", "the", "and"}
-    parts = [p for p in re.findall(r"[a-z0-9]+", str(raw).lower()) if p not in skip]
-    slug = ".".join(parts[:2]) or "homeowner"
-    city = (re.findall(r"[a-z0-9]+", (row.get("city") or "tx").lower()) or ["tx"])[0]
-    return f"{slug}.{city}@example.com"
+    key = "|".join(str(row.get(k) or "") for k in ("address", "zip", "city", "id"))
+    n = int(hashlib.md5(key.encode()).hexdigest(), 16)
+    local = DEMO_GMAILS[n % len(DEMO_GMAILS)]
+    return f"{local}@gmail.com"
 
 
 def fill_dummy_email(row: dict) -> dict:
-    if real_email(row.get("email") or "") or (row.get("email") or "").strip():
+    if real_email(row.get("email") or ""):
         return row
     row["email"] = dummy_email(row)
     return row
